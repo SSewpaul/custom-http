@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include "request.cpp"
 
 #define PORT "8080"
 #define BACKLOG 10
@@ -19,12 +20,15 @@ class TCPServer
 
     private:
         struct addrinfo hints, *servinfo, *p;
-        int status, connectedsockfd;
-        struct sockaddr_storage their_addr; // connector's address information
-        socklen_t sin_size;
+        int status;
         std::string s;
+        const int opt = 1;
 
     public:
+
+        /**
+         * Starts TCP server on port 8080
+         */
         int start_server()
         {
             // Get host address info
@@ -36,7 +40,7 @@ class TCPServer
             if ((status = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0)
             {
                 std::cerr << "Error getting host info: " << gai_strerror(status) << std::endl;
-                return 1;
+                return -1;
             }
 
             // Loop through linked list and attempt to bind to a socket
@@ -46,6 +50,11 @@ class TCPServer
                 {
                     std::cerr << "Error creating socket" << std::endl;
                     continue;
+                }
+
+                if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)) == -1) {
+                    perror("setsockopt");
+                    return 1;
                 }
 
                 if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1)
@@ -62,39 +71,21 @@ class TCPServer
 
             if (p == nullptr)
             {
-                std::cerr << "Could not bind" << gai_strerror(status) << std::endl;
-                return 1;
+                std::cerr << "Could not bind" << std::endl;
+                return -1;
             }
 
             // Start listening on port
             if (listen(sockfd, BACKLOG) == -1)
             {
-                std::cerr << "Error listening" << gai_strerror(status) << std::endl;
-                return 1;
+                std::cerr << "Error listening" << std::endl;
+                return -1;
             }
 
-            while (1)
-            {
-                sin_size = sizeof their_addr;
-                connectedsockfd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-
-                if (connectedsockfd == -1)
-                {
-                    std::cerr << "Error accepting connection" << gai_strerror(status) << std::endl;
-                    ;
-                    continue;
-                }
-
-                std::cout << "Connection accepted" << std::endl;
-
-                close(connectedsockfd);
-            }
-
-            return 0;
+            return sockfd;
         }
 
-        void stop_server() {
-            close(connectedsockfd);
+        ~TCPServer() {
             close(sockfd);
         }
 };
