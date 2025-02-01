@@ -1,6 +1,7 @@
-#include "tcpserver.cpp"
 #include <iostream>
 #include <vector>
+#include "request.cpp"
+#include "tcpserver.cpp"
 
 #define MAXDATASIZE 1024
 
@@ -84,16 +85,15 @@ int main()
             std::cerr << "Error recieving data" << std::endl;
         }
 
-        std::cout << buf << std::endl;
+        // std::cout << buf << std::endl;
 
         std::vector<std::string> header;
         std::vector<std::string> body;
 
         process_request(buf, header, body, numbytes);
 
-        for (int i = 0; i < header.size(); i++) {
-            std::cout << header[i] << std::endl;
-        }
+        // Create request object
+        Request req(header, body);
 
         close(connectedsockfd);
     }

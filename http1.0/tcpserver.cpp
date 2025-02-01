@@ -8,7 +8,6 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <signal.h>
-#include "request.cpp"
 
 #define PORT "8080"
 #define BACKLOG 10
