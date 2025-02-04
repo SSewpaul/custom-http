@@ -35,12 +35,16 @@ public:
 private:
     bool check_and_process_general_headers(std::string &line)
     {
+        int added_status = -2;
         for (auto field : GENERAL_HEADER_FIELDS)
         {
             std::string curr_value = line.substr(field.length() + 2);
             if (line.find(field + ":") != std::string::npos)
             {
-                if (num_general_headers == 0 || (num_general_headers > 0 && general_headers[num_general_headers - 1].setValue(field, curr_value)))
+                if (num_general_headers > 0 && (added_status = general_headers[num_general_headers - 1].setValue(field, curr_value)) == 0) {
+                    return true;
+                }
+                else if (num_general_headers == 0 || (num_general_headers > 0 && added_status == -1))
                 {
                     GeneralHeader h;
                     h.setValue(field, curr_value);
@@ -50,6 +54,7 @@ private:
                 }
             }
         }
+
         return false;
     }
 
