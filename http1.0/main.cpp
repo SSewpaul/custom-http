@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
-#include "request.cpp"
-#include "tcpserver.cpp"
+#include "full_request.cpp"
+#include "tcp_server.cpp"
 
 #define MAXDATASIZE 1024
 
@@ -85,7 +85,7 @@ int main()
             std::cerr << "Error recieving data" << std::endl;
         }
 
-        // std::cout << buf << std::endl;
+        std::cout << buf << std::endl;
 
         std::vector<std::string> header;
         std::vector<std::string> body;
