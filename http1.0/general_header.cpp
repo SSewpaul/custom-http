@@ -1,6 +1,7 @@
 #include <ctime>
 #include <string>
 #include <chrono>
+#include <iostream>
 
 static const std::string GENERAL_HEADER_FIELDS[2] = {"Date", "Pragma"};
 
@@ -22,15 +23,15 @@ public:
 
     GeneralHeader(std::string strdate, std::string reqpragma)
     {
-        const char *status = strptime(strdate.c_str(), "%a, %d %b %Y %H:%M:%S GMT", &tm);
+        const char *status = strptime(strdate.c_str(), "%a, %d %b %Y %H:%M:%S GMT", &tm);   // RFC 822 Format
 
         if (status == NULL)
         {
-            status = strptime(strdate.c_str(), "%a, %d-%b-%y %H:%M:%S GMT", &tm);
+            status = strptime(strdate.c_str(), "%a, %d-%b-%y %H:%M:%S GMT", &tm);   // RFC 850 Format
 
             if (status == NULL)
             {
-                status = strptime(strdate.c_str(), "%a %b %d %H:%M:%S %Y", &tm);
+                status = strptime(strdate.c_str(), "%a %b %d %H:%M:%S %Y", &tm);    // ANSI C asctime() Format
 
                 if (status == NULL)
                 {
@@ -41,7 +42,6 @@ public:
         }
 
         date = mktime(&tm);
-
         pragma = reqpragma;
 
         is_date_valid = true;
@@ -57,15 +57,15 @@ public:
                 return -1;
             }
 
-            const char *status = strptime(value.c_str(), "%a, %d %b %Y %H:%M:%S GMT", &tm);
+            const char *status = strptime(value.c_str(), "%a, %d %b %Y %H:%M:%S GMT", &tm);     // RFC 822 Format
 
             if (status == NULL)
             {
-                status = strptime(value.c_str(), "%a, %d-%b-%y %H:%M:%S GMT", &tm);
+                status = strptime(value.c_str(), "%a, %d-%b-%y %H:%M:%S GMT", &tm);     // RFC 850 Format
 
                 if (status == NULL)
                 {
-                    status = strptime(value.c_str(), "%a %b %d %H:%M:%S %Y", &tm);
+                    status = strptime(value.c_str(), "%a %b %d %H:%M:%S %Y", &tm);      // ANSI C asctime() Format
 
                     if (status == NULL)
                     {
