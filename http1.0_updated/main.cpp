@@ -1,54 +1,61 @@
 #include <iostream>
 #include <vector>
+#include <map>
 #include "tcp_server.cpp"
 
 #define MAXDATASIZE 1024
 
 /**
  * Process request and separate header and body
- * 
+ *
  * @param buf Buffer that holds incoming HTTP request
  * @param header Holds resulting header after processing
  * @param body Holds resulting body after processing
  * @param numbytes Specifies the number of bytes of data stored in buffer
  */
-void process_request(const char (&buf)[MAXDATASIZE], std::vector<std::string> &header, std::vector<std::string> &body, const int &numbytes)
+void process_request(const char (&buf)[MAXDATASIZE], std::map<std::string, std::string> &header, std::string &body, const int &numbytes)
 {
     std::string curr_line;
-    bool is_header = true;
+    int i;
 
-    for (int i = 0; i < numbytes + 1; i++)
+    // Process headers into a map
+    for (i = 0; i < numbytes + 1; i++)
     {
-        // Check if we are at the end of the line
         if (buf[i] == '\r' && buf[i + 1] == '\n')
         {
             curr_line += '\0';
-            is_header ? header.push_back(curr_line) : body.push_back(curr_line);
-            curr_line.clear();
 
-            // If there are 2 CRLFs in a row end of header has been reached
+            if (curr_line.length() > 0)
+            {
+                size_t pos = curr_line.find(": ");
+                std::string key = curr_line.substr(0, pos);
+                std::string val = curr_line.substr(pos + 2, curr_line.length());
+                header.insert({key, val});
+            }
+
+            // Check if we are at the end of header
             if (buf[i + 2] == '\r' && buf[i + 3] == '\n')
             {
-                is_header = false;
                 i += 3;
+                break;
             }
             else
             {
                 i += 1;
             }
         }
-        else if (buf[i] != '\r' || buf[i] != '\n')
+        else
         {
             curr_line += buf[i];
         }
     }
 
-    curr_line += '\0';
-    if (curr_line != "\0")
-    {
-        curr_line += '\0';
-        is_header ? header.push_back(curr_line) : body.push_back(curr_line);
+    // Process body
+    for (; i < numbytes + 1; i++) {
+        body += buf[i];
     }
+
+    body += '\0';
 }
 
 int main()
@@ -84,10 +91,10 @@ int main()
             std::cerr << "Error recieving data" << std::endl;
         }
 
-        std::cout << buf << std::endl;
+        // std::cout << buf << std::endl;
 
-        std::vector<std::string> header;
-        std::vector<std::string> body;
+        std::map<std::string, std::string> header;
+        std::string body;
 
         process_request(buf, header, body, numbytes);
 
