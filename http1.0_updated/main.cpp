@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include "tcp_server.cpp"
+#include "request_serializer.cpp"
 
 #define MAXDATASIZE 1024
 
@@ -13,7 +14,7 @@
  * @param body Holds resulting body after processing
  * @param numbytes Specifies the number of bytes of data stored in buffer
  */
-void process_request(const char (&buf)[MAXDATASIZE], std::map<std::string, std::string> &header, std::string &body, const int &numbytes)
+void process_request(const char (&buf)[MAXDATASIZE], std::map<std::string, std::string> &header, std::string &body, std::string &status_line, const int &numbytes)
 {
     std::string curr_line;
     int i;
@@ -28,9 +29,15 @@ void process_request(const char (&buf)[MAXDATASIZE], std::map<std::string, std::
             if (curr_line.length() > 0)
             {
                 size_t pos = curr_line.find(": ");
-                std::string key = curr_line.substr(0, pos);
-                std::string val = curr_line.substr(pos + 2, curr_line.length());
-                header.insert({key, val});
+
+                if (pos == std::string::npos && curr_line.find("HTTP/1.0") != std::string::npos) {
+                    status_line = curr_line;
+                }
+                else {
+                    std::string key = curr_line.substr(0, pos);
+                    std::string val = curr_line.substr(pos + 2, curr_line.length());
+                    header.insert({key, val});
+                }
             }
 
             // Check if we are at the end of header
@@ -95,8 +102,10 @@ int main()
 
         std::map<std::string, std::string> header;
         std::string body;
+        std::string status_line;
 
-        process_request(buf, header, body, numbytes);
+        process_request(buf, header, body, status_line, numbytes);
+        RequestSerializer req(header, body, status_line);
 
         close(connectedsockfd);
     }
