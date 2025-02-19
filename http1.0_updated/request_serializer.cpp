@@ -1,10 +1,11 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <bits/stdc++.h>
 #include "http_time.cpp"
 #include "method.h"
 
-const static std::string VALID_HEADERS[] = {
+static std::string VALID_HEADERS[] = {
     "Date",
     "Pragma",
     "Authorization",
@@ -23,7 +24,7 @@ const static std::string VALID_HEADERS[] = {
 
 class RequestSerializer {
     public:
-        std::map<std::string, std::string> header;
+        std::map<std::string, std::string> headers;
         std::string body;
         Method method;
         std::string uri;
@@ -31,7 +32,27 @@ class RequestSerializer {
 
     RequestSerializer() = default;
 
-    RequestSerializer(const std::map<std::string, std::string> &reqheader, const std::string &reqbody, const std::string & reqstatus) {
+    RequestSerializer(std::map<std::string, std::string> &reqheaders, const std::string &reqbody, const std::string & reqstatus) {
+        parse_status_line(reqstatus);
+        headers = reqheaders;
+        validate_header();
+    }
+
+    void validate_header() {
+        for (auto iter = headers.begin(); iter != headers.end();) {
+            std::string* header = std::find(std::begin(VALID_HEADERS), std::end(VALID_HEADERS), iter->first);
+            
+            if (header == std::end(VALID_HEADERS)) {
+                headers.erase(iter++);
+            }
+            else {
+                std::cout << iter ->second << std::endl;
+                iter++;
+            }
+        }
+    }
+
+    void parse_status_line(const std::string & reqstatus) {
         size_t m, n;
 
         if ((m = reqstatus.find(" ")) == std::string::npos) {
@@ -54,9 +75,5 @@ class RequestSerializer {
 
         uri = reqstatus.substr(m+1, n-(m+1));
         http_version = reqstatus.substr(n+1, reqstatus.length() - (n+1));
-    }
-
-    bool validate_header() {
-
     }
 };

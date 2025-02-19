@@ -50,6 +50,8 @@ void process_request(const char (&buf)[MAXDATASIZE], std::map<std::string, std::
             {
                 i += 1;
             }
+
+            curr_line.clear();
         }
         else
         {
