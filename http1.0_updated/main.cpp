@@ -2,7 +2,8 @@
 #include <vector>
 #include <map>
 #include "tcp_server.cpp"
-#include "request_serializer.cpp"
+#include "request.cpp"
+#include "response.cpp"
 
 #define MAXDATASIZE 1024
 
@@ -67,12 +68,32 @@ void process_request(const char (&buf)[MAXDATASIZE], std::map<std::string, std::
     body += '\0';
 }
 
+// get sockaddr, IPv4 or IPv6:
+void* get_in_addr(struct sockaddr* sa)
+{
+    if (sa->sa_family == AF_INET) {
+        return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
+
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+in_port_t get_port(struct sockaddr* sa)
+{
+    if (sa->sa_family == AF_INET) {
+        return ((struct sockaddr_in*)sa)->sin_port;
+    }
+
+    return ((struct sockaddr_in6*)sa)->sin6_port;
+}
+
 int main()
 {
-    int connectedsockfd, sockfd, numbytes;
+    int clientsockfd, sockfd, numbytes;
     socklen_t sin_size;
-    struct sockaddr_storage their_addr; // connector's address information
+    struct sockaddr_storage client_addr; // connector's client_addr_str address information
     char buf[MAXDATASIZE];
+    char client_addr_str[INET6_ADDRSTRLEN];
 
     TCPServer tcp_server;
     if ((sockfd = tcp_server.start_server()) == -1)
@@ -83,32 +104,49 @@ int main()
     while (1)
     {
         // Accept connection
-        sin_size = sizeof their_addr;
-        connectedsockfd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+        sin_size = sizeof client_addr;
+        clientsockfd = accept(sockfd, (struct sockaddr *)&client_addr, &sin_size);
 
-        if (connectedsockfd == -1)
+        if (clientsockfd == -1)
         {
             std::cerr << "Error accepting connection" << std::endl;
             continue;
         }
+        
+        inet_ntop(client_addr.ss_family, get_in_addr((struct sockaddr *)&client_addr), client_addr_str, sizeof client_addr_str);
 
-        std::cout << "Connection accepted" << std::endl;
+        std::cout << "Connection accepted from: " << client_addr_str << ":" << get_port((struct sockaddr *)&client_addr) << std::endl;
 
         // Receive HTTP packets
-        if ((numbytes = recv(connectedsockfd, buf, MAXDATASIZE - 1, 0)) == -1)
+        if ((numbytes = recv(clientsockfd, buf, MAXDATASIZE - 1, 0)) == -1)
         {
             std::cerr << "Error recieving data" << std::endl;
         }
 
-        // std::cout << buf << std::endl;
+        std::cout << buf << std::endl;
 
         std::map<std::string, std::string> header;
         std::string body;
         std::string status_line;
 
         process_request(buf, header, body, status_line, numbytes);
-        RequestSerializer req(header, body, status_line);
+        Request req(header, body, status_line);
 
-        close(connectedsockfd);
+        if (req.http_version != "HTTP/1.0") {
+            std::cerr << "Invalid HTTP version. Received: " << req.http_version << std::endl;
+        }
+
+        if (req.method == GET) {
+            Response res;
+            res.headers.insert({"Content-Type", "application/json"});
+            res.body = "{test: \"test\"}";
+            res.http_version = "HTTP/1.0";
+            res.status_code = 200;
+            res.reason_phrase = "OK";
+
+            res.send_response(clientsockfd);
+        }
+
+        close(clientsockfd);
     }
 }

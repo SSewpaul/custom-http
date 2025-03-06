@@ -21,8 +21,7 @@ static std::string VALID_HEADERS[] = {
     "Last-Modified",
 };
 
-
-class RequestSerializer {
+class Request {
     public:
         std::map<std::string, std::string> headers;
         std::string body;
@@ -30,9 +29,9 @@ class RequestSerializer {
         std::string uri;
         std::string http_version;
 
-    RequestSerializer() = default;
+    Request() = default;
 
-    RequestSerializer(std::map<std::string, std::string> &reqheaders, const std::string &reqbody, const std::string & reqstatus) {
+    Request(std::map<std::string, std::string> &reqheaders, const std::string &reqbody, const std::string & reqstatus) {
         parse_status_line(reqstatus);
         headers = reqheaders;
         validate_header();
@@ -41,12 +40,10 @@ class RequestSerializer {
     void validate_header() {
         for (auto iter = headers.begin(); iter != headers.end();) {
             std::string* header = std::find(std::begin(VALID_HEADERS), std::end(VALID_HEADERS), iter->first);
-            
             if (header == std::end(VALID_HEADERS)) {
                 headers.erase(iter++);
             }
             else {
-                std::cout << iter ->second << std::endl;
                 iter++;
             }
         }
