@@ -3,7 +3,6 @@
 #include <map>
 #include "tcp_server.cpp"
 #include "frame.cpp"
-#include "request.cpp"
 #include "http1.1_response.cpp"
 
 #define MAXDATASIZE 1024
@@ -27,6 +26,20 @@ in_port_t get_port(struct sockaddr *sa)
     }
 
     return ((struct sockaddr_in6 *)sa)->sin6_port;
+}
+
+void handleSwitching(int clientsockfd)
+{
+    std::map<std::string, std::string> header = {{"Upgrade", "h2c"},
+                                                 {"Connection", "Upgrade"}};
+    std::string body = "";
+    unsigned int status_code = 101;
+    std::string reason = "Switching Protocols";
+    HTTP1Response res(header, body, reason, status_code, clientsockfd);
+
+    // Send the upgrade response
+    res.send_response();
+    std::cout << "Upgrading to HTTP/2" << std::endl;
 }
 
 int main()
@@ -65,26 +78,28 @@ int main()
             std::cerr << "Error recieving data" << std::endl;
         }
 
-        Request req(buf, numbytes);
+        std::string request(buf);
+        std::cout << request << std::endl;
 
-        if (req.is_http2_upgrade())
+        if (request.find("Upgrade: h2c") != std::string::npos)
         {
-            std::map<std::string, std::string> header = {{"Upgrade", "h2c"},
-        {"Connection", "Upgrade"}};
-            std::string body = "";
-            unsigned int status_code = 101;
-            std::string reason = "Switching Protocols";
-            HTTP1Response res(header, body, reason, status_code, clientsockfd);
+            handleSwitching(clientsockfd);
 
-            // Send the upgrade response
-            res.send_response();
-            std::cout << "Upgrading to HTTP/2" << std::endl;
+            char prefaceBuffer[24];
+            numbytes = read(clientsockfd, prefaceBuffer, 24);
+            
+            if (numbytes == 24) {
+                std::string preface(prefaceBuffer);
+                if (preface == "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n") {
+                    std::cout << "Received HTTP/2 preface. Ready to process frames.\n";
+                }
+            }
         }
-
-        else {
+        else
+        {
             // If no upgrade request, send an error back
             std::map<std::string, std::string> header = {{"Content-Type", "text/plain"},
-        {"Connection", "close"}};
+                                                         {"Connection", "close"}};
             std::string body = "This server does not support HTTP/1.1. Please use HTTP/2.";
             unsigned int status_code = 505;
             std::string reason = "HTTP Version Not Supported";
