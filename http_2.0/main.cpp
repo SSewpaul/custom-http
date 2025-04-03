@@ -2,7 +2,7 @@
 #include <vector>
 #include <map>
 #include "tcp_server.cpp"
-#include "frame.cpp"
+#include "baseFrame.hpp"
 #include "http1.1_response.cpp"
 
 #define MAXDATASIZE 1024
@@ -85,15 +85,19 @@ int main()
         {
             handleSwitching(clientsockfd);
 
+            // Every HTTP2 handshake starts with a preface
             char prefaceBuffer[24];
             numbytes = read(clientsockfd, prefaceBuffer, 24);
             
             if (numbytes == 24) {
+                // Check if preface is correctly sent
                 std::string preface(prefaceBuffer);
                 if (preface == "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n") {
                     std::cout << "Received HTTP/2 preface. Ready to process frames.\n";
                 }
             }
+
+
         }
         else
         {
